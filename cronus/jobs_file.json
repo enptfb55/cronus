@@ -1,0 +1,25 @@
+[{
+    "name": "hello_cronus",
+    "start": "* * * * *",
+    "command": "echo \"hello, cronus!\"",
+    "host": "samato-XPS-L322X"
+},
+{
+    "name": "midnight test",
+    "start": "0 0 * * *",
+    "command": "echo \"hello, midnight!\"",
+    "host": "test"
+},
+{
+    "name": "every other",
+    "start": "*/2 * * * *",
+    "command": "echo \"hello, every other!\"",
+    "host": "samato-XPS-L322X"
+},
+{
+    "name": "hello_cronus2",
+    "start": "* * * * *",
+    "command": "echo \"hello, cronus!\"",
+    "host": "test"
+}]
+
