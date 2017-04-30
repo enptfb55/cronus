@@ -3,6 +3,7 @@ from croniter import croniter
 import datetime
 import time
 from subprocess import call
+import subprocess
 import logging
 import sys
 import os
@@ -11,6 +12,7 @@ import argparse
 import ConfigParser
 from json_handle import JsonHandle
 from mongodb_handle import MongoDBHandle
+import threading
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger('cronus')
@@ -22,26 +24,43 @@ file_handler.setLevel(logging.DEBUG)
 file_handler.setFormatter(formatter)
 logger.addHandler(file_handler)
 
+class ProcessThread(threading.Thread):
+    def __init__(self, process):
+        self.process = process
+        threading.Thread.__init__(self)
+
+    def run(self):
+        lines_iterator = iter(self.process.stdout.readline, b"")
+        while self.process.poll() is None:
+            for line in lines_iterator:
+                nline = line.rstrip()
+                print nline.decode('latin')
+
+
 
 def execute_job(name, cmd):
     ''' execute job
     '''
 
     logger.info('exec {0}: {1}'.format(name, cmd))
-    call(cmd.split())
+    #call(cmd.split())
+    process = subprocess.Popen(cmd,stdout=subprocess.PIPE, shell=True)
+    ph = ProcessThread(process)
+    ph.start()
 
 
 class Cronus(object):
     def __init__(self, handle):
         self.handle = handle
         self.sched = sched.scheduler(time.time, time.sleep)
-    def schedule_job(self, job, run_time):
+
+    def schedule_job(self, name, command, run_time):
         ''' schedule job
         '''
 
         delay = (run_time - datetime.datetime.now()).total_seconds()
-        logger.debug('exec {0} in {1}s'.format(job.get('name'), delay))
-        self.sched.enter(delay, 1, execute_job, [job.get('name'), job.get('command')])
+        logger.debug('exec {0} in {1}s'.format(name, delay))
+        self.sched.enter(delay, 1, execute_job, [name, command])
 
     def check_job(self, job):
         ''' check job 
@@ -58,14 +77,14 @@ class Cronus(object):
             cron = croniter(start_time, curr_time)
             next_exec = cron.get_next(datetime.datetime)
             if next_exec <= curr_min:
-                self.schedule_job(job, next_exec)
+                self.schedule_job(job.get('name'), job.get('start_command'), next_exec)
 
         end_time = job.get('end')
         if end_time:
             cron = croniter(end_time, curr_time)
             next_exec = cron.get_next(datetime.datetime)
             if next_exec <= curr_min:
-                self.schedule_job(job, next_exec)
+                self.schedule_job(job.get('name'), job.get('end_command'), next_exec)
 
 
     def update(self):
