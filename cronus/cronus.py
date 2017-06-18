@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 
 from croniter import croniter
 import datetime
@@ -10,8 +11,8 @@ import os
 import sched
 import argparse
 import ConfigParser
-from json_handle import JsonHandle
-from mongodb_handle import MongoDBHandle
+import job_handle
+from job_handle_factory import JobHandleFactory
 import threading
 
 logging.basicConfig(level=logging.DEBUG)
@@ -44,7 +45,9 @@ def execute_job(name, cmd):
 
     logger.info('exec {0}: {1}'.format(name, cmd))
     #call(cmd.split())
-    process = subprocess.Popen(cmd,stdout=subprocess.PIPE, shell=True)
+    process = subprocess.Popen(cmd,
+                               stdout=subprocess.PIPE,
+                               shell=True)
     ph = ProcessThread(process)
     ph.start()
 
@@ -72,14 +75,14 @@ class Cronus(object):
         if job.get('host') != os.uname()[1]:
             return
 
-        start_time = job.get('start')
+        start_time = job.get('start_crontab')
         if start_time:
             cron = croniter(start_time, curr_time)
             next_exec = cron.get_next(datetime.datetime)
             if next_exec <= curr_min:
                 self.schedule_job(job.get('name'), job.get('start_command'), next_exec)
 
-        end_time = job.get('end')
+        end_time = job.get('end_crontab')
         if end_time:
             cron = croniter(end_time, curr_time)
             next_exec = cron.get_next(datetime.datetime)
@@ -91,7 +94,7 @@ class Cronus(object):
         ''' update jobs 
         '''
 
-        for job in self.handle.iter():
+        for job in self.handle:
             if self.check_job(job):
                 schedule_job(job)
 
@@ -108,27 +111,30 @@ def main():
 
     # create arg parser
     parser = argparse.ArgumentParser(description='Process some integers.')
-    parser.add_argument('--config', dest='config', type=str,
+    parser.add_argument('-c', '--config', dest='config', type=str,
                         help='Path to config')
-    parser.add_argument('-f', '--file', dest='job_file', type=str,
-                        help='Path to json job file')
-
 
     args = parser.parse_args()
     handle = None
-
-    if args.job_file:
-        handle = JsonHandle(args.job_file)
 
     if args.config:
         config = ConfigParser.ConfigParser()
         config.read(args.config)
 
+        handle = JobHandleFactory.create(config)
+
+        '''
+        if config.get('Source', 'type') == 'json':
+            handle = JsonHandle(args.job_file)
         if config.get('Source', 'type') == 'mongodb':
             handle = MongoDBHandle(config.get('Source', 'mongo_host'),
                                    config.get('Source', 'mongo_port'),
                                    config.get('Source', 'mongo_db'),
                                    config.get('Source', 'mongo_collection'))
+        '''
+
+    if not handle:
+        raise Exception('No handle specified')
 
     cronus = Cronus(handle)
     cronus.run()

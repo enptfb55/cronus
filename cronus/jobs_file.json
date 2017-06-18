@@ -1,24 +1,24 @@
 [{
     "name": "hello_cronus",
-    "start": "* * * * *",
-    "start_command": "echo \"hello, cronus!\"",
+    "start_crontab": "* * * * *",
+    "start_command": "sleep 30 && echo \"hello, cronus!\"&",
     "host": "samato-XPS-L322X"
 },
 {
     "name": "midnight test",
-    "start": "0 0 * * *",
+    "start_crontab": "0 0 * * *",
     "start_command": "echo \"hello, midnight!\"",
     "host": "test"
 },
 {
     "name": "every other",
-    "start": "*/2 * * * *",
+    "start_crontab": "*/2 * * * *",
     "start_command": "echo \"hello, every other!\"",
     "host": "samato-XPS-L322X"
 },
 {
     "name": "hello_cronus2",
-    "start": "* * * * *",
+    "start_crontab": "* * * * *",
     "start_command": "echo \"hello, cronus!\"",
     "host": "test"
 }]
